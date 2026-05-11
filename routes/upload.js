@@ -12,9 +12,11 @@ function makeHash(element, userID) {
   return hash;
 }
 
+
+// adds CSV files to PostgreSQL
 router.post("/", upload.single("file"), (req, res) => {
   parse(req.file.buffer, { columns: true }, async (err, records) => {
-    if (err) return res.status(400).json({ error: err.message });  
+    if (err) return res.status(400).json({ error: err.message });
 
     const cleanData = records.map((row) => {
       return {

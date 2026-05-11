@@ -2,7 +2,7 @@ const express = require('express');
 const db = require('./db');
 const app = express();
 const uploadRouter = require('./routes/upload');
-
+const categoryRouter = require('./routes/categories');
 
 
 app.use(express.json());
@@ -16,6 +16,7 @@ app.get('/health', async (req, res) => {
     }
 });
 
+app.use('/categories', categoryRouter);
 app.use('/upload', uploadRouter);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
