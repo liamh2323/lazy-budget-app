@@ -1,8 +1,13 @@
+require('dotenv').config();
+
 const express = require('express');
 const db = require('./db');
 const app = express();
 const uploadRouter = require('./routes/upload');
 const categoryRouter = require('./routes/categories');
+const mappedRouter = require('./routes/mappedMerchants');
+const authRouter = require('./routes/auth');
+const verifyToken = require('./middleware/verifyToken');
 
 
 app.use(express.json());
@@ -16,7 +21,9 @@ app.get('/health', async (req, res) => {
     }
 });
 
-app.use('/categories', categoryRouter);
-app.use('/upload', uploadRouter);
+app.use('/mappedMerchants',verifyToken, mappedRouter);
+app.use('/categories', verifyToken,categoryRouter);
+app.use('/upload', verifyToken, uploadRouter);
+app.use('/auth', authRouter);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
