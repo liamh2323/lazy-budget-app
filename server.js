@@ -8,6 +8,7 @@ const categoryRouter = require('./routes/categories');
 const mappedRouter = require('./routes/mappedMerchants');
 const authRouter = require('./routes/auth');
 const verifyToken = require('./middleware/verifyToken');
+const transactionRouter = require('./routes/transactions');
 
 
 app.use(express.json());
@@ -21,6 +22,7 @@ app.get('/health', async (req, res) => {
     }
 });
 
+app.use('/transactions', verifyToken, transactionRouter);
 app.use('/mappedMerchants',verifyToken, mappedRouter);
 app.use('/categories', verifyToken,categoryRouter);
 app.use('/upload', verifyToken, uploadRouter);
