@@ -22,6 +22,7 @@ app.get('/health', async (req, res) => {
     }
 });
 
+app.use(express.static('public'));
 app.use('/transactions', verifyToken, transactionRouter);
 app.use('/mappedMerchants',verifyToken, mappedRouter);
 app.use('/categories', verifyToken,categoryRouter);
