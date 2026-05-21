@@ -11,6 +11,13 @@ document.getElementById("login").addEventListener("click", function () {
   })
     .then((res) => res.json())
     .then((data) => {
-      console.log(data);
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        console.log(data);
+        window.location.href = "/dashboard.html";
+      } else {
+        console.error("Login failed: ", data.message);
+        console.log(data);
+      }
     });
 });
