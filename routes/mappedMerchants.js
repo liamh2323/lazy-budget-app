@@ -2,11 +2,39 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+// merchants that appear in transactions but have no mapping yet
+router.get("/unmapped", async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT t.merchantname,
+              SUM(t.amount) AS total
+       FROM transactions t
+       WHERE t.userid = $1
+         AND t.merchantname NOT IN (
+           SELECT mm.merchantname FROM mappedMerchants mm WHERE mm.userid = $1
+         )
+       GROUP BY t.merchantname
+       ORDER BY t.merchantname`,
+      [req.userid],
+    );
+    res.json(result.rows);
+  } catch (dbErr) {
+    res.status(500).json({ error: dbErr.message });
+  }
+});
+
 // show all mappedMerchants
 router.get("/", async (req, res) => {
     try {
         const result = await db.query(
-            "SELECT * FROM mappedMerchants WHERE userID = $1",
+            `SELECT mm.*, COALESCE(s.total, 0) AS total
+             FROM mappedMerchants mm
+             LEFT JOIN (
+               SELECT merchantname, SUM(amount) AS total
+               FROM transactions WHERE userid = $1
+               GROUP BY merchantname
+             ) s ON mm.merchantname = s.merchantname
+             WHERE mm.userID = $1`,
             [req.userid],
         );
         res.json(result.rows);
@@ -18,13 +46,21 @@ router.get("/", async (req, res) => {
 // add a new merchant to a category
 router.post("/", async(req,res) =>{
     try {
-        const result =await db.query(
-            `INSERT INTO mappedMerchants (merchantName,categoryID,userID) 
-            VALUES($1,$2,$3) 
-            ON CONFLICT (userid, merchantname) DO UPDATE SET categoryid = $2 
+        const result = await db.query(
+            `INSERT INTO mappedMerchants (merchantName,categoryID,userID)
+            VALUES($1,$2,$3)
+            ON CONFLICT (userid, merchantname) DO UPDATE SET categoryid = $2
             RETURNING *`,
-            [req.body.merchantName,req.body.categoryID, req.userid],
+            [req.body.merchantName, req.body.categoryID, req.userid],
         );
+
+        // backfill all transactions from this merchant with the new category
+        await db.query(
+            `UPDATE transactions SET categoryid = $1, categorised = true
+             WHERE userid = $2 AND merchantname = $3`,
+            [req.body.categoryID, req.userid, req.body.merchantName],
+        );
+
         res.json(result.rows);
     } catch (dbErr) {
         res.status(500).json({ error: dbErr.message });

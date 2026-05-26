@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Categorise Transactions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-900 text-gray-100 min-h-screen">
+    <header
+      class="border-b border-gray-800 px-6 py-4 flex items-center justify-between"
+    >
+      <h1 class="text-base font-semibold tracking-tight">
+        Categorise Transactions
+      </h1>
+      <a
+        href="/dashboard.html"
+        class="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+        >Back to dashboard</a
+      >
+    </header>
+
+    <main class="p-6 max-w-3xl mx-auto space-y-5">
+      <p class="text-sm text-gray-400">
+        Assign categories to your uncategorised transactions. Tick
+        <span class="text-gray-300">save mapping</span> to automatically
+        categorise this merchant in future uploads.
+      </p>
+
+      <div class="flex gap-2 items-center">
+        <input
+          id="new-cat-input"
+          type="text"
+          placeholder="New category name"
+          class="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500 transition-colors w-56"
+        />
+        <button
+          id="new-cat-btn"
+          class="bg-gray-700 hover:bg-gray-600 rounded px-4 py-1.5 text-sm transition-colors"
+        >
+          Add Category
+        </button>
+        <p id="new-cat-msg" class="text-xs text-emerald-400 hidden">Added.</p>
+      </div>
+
+      <div id="transactions-list" class="space-y-2">
+        <p class="text-sm text-gray-500">Loading…</p>
+      </div>
+
+      <div id="action-bar" class="hidden flex items-center gap-4 pt-2">
+        <button
+          id="save-all-btn"
+          class="bg-indigo-600 hover:bg-indigo-500 rounded px-5 py-2 text-sm font-medium transition-colors"
+        >
+          Save &amp; continue
+        </button>
+        <a
+          href="/dashboard.html"
+          class="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+          >Skip</a
+        >
+      </div>
+    </main>
+
+    <script src="categorise.js"></script>
+  </body>
+</html>

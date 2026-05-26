@@ -1,23 +1,57 @@
-document.getElementById("login").addEventListener("click", function () {
-  console.log("clicked");
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  console.log(email, password);
+// Toggle panels
+document.getElementById('show-register').addEventListener('click', () => {
+  document.getElementById('login-panel').classList.add('hidden');
+  document.getElementById('register-panel').classList.remove('hidden');
+});
 
-  fetch("/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: email, password: password }),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        console.log(data);
-        window.location.href = "/dashboard.html";
-      } else {
-        console.error("Login failed: ", data.message);
-        console.log(data);
-      }
-    });
+document.getElementById('show-login').addEventListener('click', () => {
+  document.getElementById('register-panel').classList.add('hidden');
+  document.getElementById('login-panel').classList.remove('hidden');
+});
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errorEl = document.getElementById('login-error');
+
+  errorEl.classList.add('hidden');
+
+  const res = await fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await res.json();
+  if (data.token) {
+    localStorage.setItem('token', data.token);
+    window.location.href = '/dashboard.html';
+  } else {
+    errorEl.textContent = data.message || 'Login failed.';
+    errorEl.classList.remove('hidden');
+  }
+});
+
+document.getElementById('register-btn').addEventListener('click', async () => {
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const errorEl = document.getElementById('register-error');
+  const successEl = document.getElementById('register-success');
+
+  errorEl.classList.add('hidden');
+  successEl.classList.add('hidden');
+
+  const res = await fetch('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await res.json();
+  if (res.status === 201) {
+    successEl.classList.remove('hidden');
+  } else {
+    errorEl.textContent = data.error || 'Registration failed.';
+    errorEl.classList.remove('hidden');
+  }
 });

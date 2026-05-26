@@ -1,18 +1,105 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Budget App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body
+    class="bg-gray-900 text-gray-100 h-full min-h-screen flex items-center justify-center"
+  >
+    <div class="w-full max-w-sm space-y-6 px-4">
+      <h1 class="text-2xl font-semibold text-center tracking-tight">
+        Budget App
+      </h1>
 
-    <head>
-    
-    </head>
-    
-    <body>
-        <input type="text" id="email">
-        <input type="password" id="password">
+      <div
+        id="login-panel"
+        class="bg-gray-800 border border-gray-700 rounded-lg p-8 space-y-4"
+      >
+        <h2 class="text-sm font-medium text-gray-300">Sign in</h2>
+        <div class="space-y-1">
+          <label class="text-xs text-gray-400">Email</label>
+          <input
+            type="text"
+            id="email"
+            placeholder="you@example.com"
+            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs text-gray-400">Password</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="••••••••"
+            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
+        <p id="login-error" class="text-xs text-red-400 hidden"></p>
+        <button
+          id="login-btn"
+          class="w-full bg-indigo-600 hover:bg-indigo-500 rounded px-4 py-2 text-sm font-medium transition-colors"
+        >
+          Sign in
+        </button>
+        <p class="text-xs text-center text-gray-500">
+          No account?
+          <button
+            id="show-register"
+            class="text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            Register
+          </button>
+        </p>
+      </div>
 
-        <button id="login"> login </button>
-        <script src="login.js"></script>
-        <button>forgot password?</button>
-        <button>register</button>
-    </body>
+      <div
+        id="register-panel"
+        class="hidden bg-gray-800 border border-gray-700 rounded-lg p-8 space-y-4"
+      >
+        <h2 class="text-sm font-medium text-gray-300">Create account</h2>
+        <div class="space-y-1">
+          <label class="text-xs text-gray-400">Email</label>
+          <input
+            type="text"
+            id="reg-email"
+            placeholder="you@example.com"
+            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs text-gray-400">Password</label>
+          <input
+            type="password"
+            id="reg-password"
+            placeholder="••••••••"
+            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
+        <p id="register-error" class="text-xs text-red-400 hidden"></p>
+        <p id="register-success" class="text-xs text-emerald-400 hidden">
+          Account created — you can now sign in.
+        </p>
+        <button
+          id="register-btn"
+          class="w-full bg-indigo-600 hover:bg-indigo-500 rounded px-4 py-2 text-sm font-medium transition-colors"
+        >
+          Create account
+        </button>
+        <p class="text-xs text-center text-gray-500">
+          Already have an account?
+          <button
+            id="show-login"
+            class="text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            Sign in
+          </button>
+        </p>
+      </div>
+    </div>
 
+    <script src="login.js"></script>
+  </body>
 </html>
