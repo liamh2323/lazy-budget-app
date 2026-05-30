@@ -29,7 +29,7 @@ const CHART_COLORS = [
 const token = localStorage.getItem("token");
 if (!token) window.location.href = "/login.html";
 
-var BASE_URL = "https://lazy-budget-app.onrender.com/";
+var BASE_URL = "https://lazy-budget-app.onrender.com";
 
 function authHeaders() {
   return {
@@ -485,7 +485,7 @@ document.getElementById("upload-btn").addEventListener("click", async () => {
 
   statusEl.textContent = "Uploading…";
 
-  const res = await fetch("/upload", {
+  const res = await fetch(BASE_URL + "/upload", {
     method: "POST",
     headers: { Authorization: "Bearer " + token },
     body: formData,

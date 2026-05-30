@@ -9,6 +9,8 @@ document.getElementById('show-login').addEventListener('click', () => {
   document.getElementById('login-panel').classList.remove('hidden');
 });
 
+const BASE_URL = "https://lazy-budget-app.onrender.com";
+
 document.getElementById('login-btn').addEventListener('click', async () => {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -16,7 +18,7 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 
   errorEl.classList.add('hidden');
 
-  const res = await fetch('/auth/login', {
+  const res = await fetch(BASE_URL + '/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -41,7 +43,7 @@ document.getElementById('register-btn').addEventListener('click', async () => {
   errorEl.classList.add('hidden');
   successEl.classList.add('hidden');
 
-  const res = await fetch('/auth/register', {
+  const res = await fetch(BASE_URL + '/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
