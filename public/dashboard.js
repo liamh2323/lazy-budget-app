@@ -29,6 +29,8 @@ const CHART_COLORS = [
 const token = localStorage.getItem("token");
 if (!token) window.location.href = "/login.html";
 
+var BASE_URL = "https://lazy-budget-app.onrender.com/";
+
 function authHeaders() {
   return {
     "Content-Type": "application/json",
@@ -37,7 +39,7 @@ function authHeaders() {
 }
 
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(path, { headers: authHeaders(), ...opts });
+  const res = await fetch(BASE_URL + path, { headers: authHeaders(), ...opts });
   if (res.status === 401) {
     window.location.href = "/login.html";
     return null;
