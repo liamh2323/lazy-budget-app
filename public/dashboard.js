@@ -55,6 +55,7 @@ function escHtml(str) {
 
 let categories = [];
 let spendingChart = null;
+let trendsChart = null;
 
 document.getElementById("logout-btn").addEventListener("click", () => {
   localStorage.removeItem("token");
@@ -112,9 +113,11 @@ async function loadOverview() {
   const month = monthSel.value;
   const year = yearSel.value;
 
-  const [debits, credits] = await Promise.all([
+  const [debits, credits, trends, topMerchants] = await Promise.all([
     apiFetch(`/transactions/sumDebits?month=${month}&year=${year}`),
     apiFetch(`/transactions/sumCredits?month=${month}&year=${year}`),
+    apiFetch(`/transactions/monthlyTrends?months=6`),
+    apiFetch(`/transactions/topMerchants?month=${month}&year=${year}&limit=5`),
   ]);
 
   if (!debits || !credits) return;
@@ -130,7 +133,16 @@ async function loadOverview() {
   document.getElementById("total-debits").textContent =
     "€" + totalDebits.toFixed(2);
 
+  // Net savings
+  const netSavings = totalCredits - totalDebits;
+  const netEl = document.getElementById("net-savings");
+  netEl.textContent = (netSavings >= 0 ? "€" : "-€") + Math.abs(netSavings).toFixed(2);
+  netEl.classList.remove("text-emerald-400", "text-red-400");
+  netEl.classList.add(netSavings >= 0 ? "text-emerald-400" : "text-red-400");
+
   renderChart(debits);
+  if (trends) renderTrendsChart(trends);
+  if (topMerchants) renderTopMerchants(topMerchants);
 }
 
 function renderChart(debits) {
@@ -173,6 +185,13 @@ function renderChart(debits) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const row = rows[idx];
+        if (!row.categoryid) return;
+        window.location.href = `/category.html?categoryid=${row.categoryid}&categoryname=${encodeURIComponent(row.categoryname)}&month=${monthSel.value}&year=${yearSel.value}`;
+      },
       plugins: {
         legend: {
           position: "right",
@@ -186,6 +205,82 @@ function renderChart(debits) {
       },
     },
   });
+}
+
+function renderTrendsChart(data) {
+  const canvas = document.getElementById("trends-chart");
+  if (trendsChart) trendsChart.destroy();
+
+  if (!data || data.length === 0) {
+    canvas.classList.add("hidden");
+    return;
+  }
+  canvas.classList.remove("hidden");
+
+  const labels = data.map((d) => MONTHS[d.mo - 1] + " " + d.yr);
+  const debitsData = data.map((d) => parseFloat(d.total_debits || 0));
+  const creditsData = data.map((d) => parseFloat(d.total_credits || 0));
+
+  trendsChart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Expenses",
+          data: debitsData,
+          backgroundColor: "#ef4444",
+          borderRadius: 4,
+        },
+        {
+          label: "Income",
+          data: creditsData,
+          backgroundColor: "#10b981",
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: "#d1d5db", font: { size: 11 } },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` €${ctx.parsed.y.toFixed(2)}`,
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { color: "#9ca3af", font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: "#9ca3af", callback: (v) => "€" + v }, grid: { color: "#374151" } },
+      },
+    },
+  });
+}
+
+function renderTopMerchants(data) {
+  const list = document.getElementById("top-merchants-list");
+
+  if (!data || data.length === 0) {
+    list.innerHTML = '<p class="text-sm text-gray-500">No merchant data for this period.</p>';
+    return;
+  }
+
+  list.innerHTML = data
+    .map(
+      (m, i) => `
+    <div class="flex items-center justify-between bg-gray-700/50 rounded px-3 py-2">
+      <span class="text-sm">
+        <span class="text-gray-400 mr-2">${i + 1}.</span>
+        ${escHtml(m.merchantname)}
+      </span>
+      <span class="text-sm text-red-400 font-medium">€${parseFloat(m.total).toFixed(2)}</span>
+    </div>
+  `,
+    )
+    .join("");
 }
 
 async function loadCategories() {

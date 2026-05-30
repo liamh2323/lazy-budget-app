@@ -12,6 +12,20 @@ function makeHash(element, userID) {
   return hash;
 }
 
+function changeDateFormat(element){
+  var changedDate = "";
+
+  const splitString = element.split("/");
+  changedDate += "20" + splitString[2];
+  changedDate += "-";
+  changedDate += splitString[1];
+  changedDate += "-";
+  changedDate += splitString[0];
+
+  return changedDate;
+
+}
+
 // adds CSV files to PostgreSQL
 router.post("/", upload.single("file"), (req, res) => {
   parse(req.file.buffer, { columns: true }, async (err, records) => {
@@ -20,7 +34,7 @@ router.post("/", upload.single("file"), (req, res) => {
     try {
       const cleanData = records.map((row) => {
         return {
-          date: row[" Posted Transactions Date"],
+          date: changeDateFormat(row[" Posted Transactions Date"]),
           merchant: row[" Description"],
           type: row["Transaction Type"] == "Debit" ? "debit" : "credit",
           amount:

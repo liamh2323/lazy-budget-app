@@ -55,9 +55,11 @@ router.post("/", async(req,res) =>{
         );
 
         // backfill all transactions from this merchant with the new category
+        // Skip transactions that have been split into multiple categories
         await db.query(
             `UPDATE transactions SET categoryid = $1, categorised = true
-             WHERE userid = $2 AND merchantname = $3`,
+             WHERE userid = $2 AND merchantname = $3
+               AND NOT EXISTS (SELECT 1 FROM transaction_splits ts WHERE ts.transactionid = transactions.transactionid)`,
             [req.body.categoryID, req.userid, req.body.merchantName],
         );
 
@@ -67,7 +69,7 @@ router.post("/", async(req,res) =>{
     }
 });
 
-//delete MM
+//delete MM by ID
 router.delete("/", async(req,res) => {
     try {
         await db.query(
@@ -75,6 +77,19 @@ router.delete("/", async(req,res) => {
             [req.body.mappedID, req.userid],
         );
         res.json('category deleted')
+    } catch (dbErr) {
+        res.status(500).json({ error: dbErr.message });
+    }
+});
+
+// delete MM by merchant name
+router.delete("/byMerchant", async (req, res) => {
+    try {
+        await db.query(
+            "DELETE FROM mappedMerchants WHERE merchantname = $1 AND userID = $2",
+            [req.body.merchantName, req.userid],
+        );
+        res.json({ success: true });
     } catch (dbErr) {
         res.status(500).json({ error: dbErr.message });
     }

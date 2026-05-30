@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Budget App</title>
+    <title>Lazy Budgeting</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
@@ -11,7 +11,7 @@
     <header
       class="border-b border-gray-800 px-6 py-4 flex items-center justify-between"
     >
-      <h1 class="text-base font-semibold tracking-tight">Budget App</h1>
+      <h1 class="text-base font-semibold tracking-tight">Lazy Budgeting</h1>
       <button
         id="logout-btn"
         class="text-sm text-gray-400 hover:text-gray-200 transition-colors"
@@ -60,7 +60,7 @@
           ></select>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-3 gap-4">
           <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
             <p class="text-xs text-gray-400 uppercase tracking-wider">Income</p>
             <p
@@ -81,11 +81,22 @@
               —
             </p>
           </div>
+          <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <p class="text-xs text-gray-400 uppercase tracking-wider">
+              Net Savings
+            </p>
+            <p
+              id="net-savings"
+              class="text-2xl font-semibold mt-1"
+            >
+              —
+            </p>
+          </div>
         </div>
 
         <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
           <p class="text-sm font-medium text-gray-300 mb-4">
-            Spending by Category
+            Spending by Category (Click each category for more details)
           </p>
           <div class="flex items-center justify-center" style="height: 260px">
             <canvas id="spending-chart"></canvas>
@@ -96,6 +107,22 @@
           >
             No spending data for this period.
           </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
+            <p class="text-sm font-medium text-gray-300 mb-4">
+              Spending Trends (6 months)
+            </p>
+            <canvas id="trends-chart"></canvas>
+          </div>
+
+          <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
+            <p class="text-sm font-medium text-gray-300 mb-4">
+              Biggest Expenditure
+            </p>
+            <div id="top-merchants-list" class="space-y-2"></div>
+          </div>
         </div>
       </div>
 

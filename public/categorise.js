@@ -46,6 +46,107 @@ function refreshCategoryDropdowns() {
   });
 }
 
+function renderSplitEditor(row, transaction) {
+  const amount = parseFloat(transaction.amount).toFixed(2);
+  const opts = buildCatOptions();
+
+  row.innerHTML = `
+    <div class="w-full space-y-3">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-medium">${escHtml(transaction.merchantname)}
+          <span class="text-gray-400 ml-2">€${amount}</span>
+        </p>
+        <button class="split-cancel text-xs text-gray-400 hover:text-gray-200 transition-colors">Cancel</button>
+      </div>
+      <div class="split-rows space-y-2"></div>
+      <div class="flex items-center gap-3">
+        <button class="split-add-row text-xs bg-gray-700 hover:bg-gray-600 rounded px-3 py-1 transition-colors">+ Add row</button>
+        <span class="text-xs text-gray-400">Remaining: <span class="split-remaining text-white">€${amount}</span></span>
+      </div>
+      <button class="split-save text-xs bg-indigo-600 hover:bg-indigo-500 rounded px-4 py-1.5 transition-colors">Save Split</button>
+    </div>
+  `;
+
+  const splitRowsEl = row.querySelector(".split-rows");
+  const remainingEl = row.querySelector(".split-remaining");
+
+  function addSplitRow() {
+    const div = document.createElement("div");
+    div.className = "flex items-center gap-2 split-row";
+    div.innerHTML = `
+      <select class="split-cat bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-indigo-500 flex-1">
+        <option value="">— select —</option>
+        ${opts}
+      </select>
+      <input type="number" step="0.01" min="0" class="split-amount bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm w-28 focus:outline-none focus:border-indigo-500" placeholder="€0.00">
+      <button class="split-remove-row text-xs text-gray-400 hover:text-red-400 transition-colors">✕</button>
+    `;
+    splitRowsEl.appendChild(div);
+
+    div.querySelector(".split-amount").addEventListener("input", updateRemaining);
+    div.querySelector(".split-remove-row").addEventListener("click", () => {
+      div.remove();
+      updateRemaining();
+    });
+  }
+
+  function updateRemaining() {
+    const total = parseFloat(amount);
+    let used = 0;
+    splitRowsEl.querySelectorAll(".split-amount").forEach((inp) => {
+      used += parseFloat(inp.value) || 0;
+    });
+    const rem = (total - used).toFixed(2);
+    remainingEl.textContent = "€" + rem;
+    remainingEl.classList.toggle("text-red-400", parseFloat(rem) < 0);
+    remainingEl.classList.toggle("text-emerald-400", parseFloat(rem) === 0);
+    remainingEl.classList.toggle("text-white", parseFloat(rem) > 0);
+  }
+
+  // Start with 2 rows
+  addSplitRow();
+  addSplitRow();
+
+  row.querySelector(".split-add-row").addEventListener("click", addSplitRow);
+
+  row.querySelector(".split-cancel").addEventListener("click", () => {
+    // Re-render this transaction normally by re-running init
+    init();
+  });
+
+  row.querySelector(".split-save").addEventListener("click", async () => {
+    const splitRows = splitRowsEl.querySelectorAll(".split-row");
+    const splits = [];
+    for (const sr of splitRows) {
+      const categoryid = sr.querySelector(".split-cat").value;
+      const amt = parseFloat(sr.querySelector(".split-amount").value);
+      if (!categoryid || isNaN(amt) || amt <= 0) continue;
+      splits.push({ categoryid: parseInt(categoryid), amount: amt });
+    }
+
+    if (splits.length < 2) {
+      alert("Need at least 2 valid split rows.");
+      return;
+    }
+
+    const splitTotal = splits.reduce((s, r) => s + r.amount, 0);
+    if (Math.abs(splitTotal - parseFloat(amount)) > 0.01) {
+      alert("Split amounts must sum to €" + amount);
+      return;
+    }
+
+    const result = await apiFetch(`/transactions/${transaction.transactionid}/split`, {
+      method: "POST",
+      body: JSON.stringify({ splits }),
+    });
+
+    if (result && result.success) {
+      // Remove this row since it's now categorised
+      row.remove();
+    }
+  });
+}
+
 async function init() {
   [transactions, categories] = await Promise.all([
     apiFetch("/transactions/uncategorised"),
@@ -89,13 +190,20 @@ async function init() {
         <input type="checkbox" class="save-map-cb accent-indigo-500" checked>
         save mapping
       </label>
+      <button class="writeoff-btn text-xs px-2 py-1 rounded transition-colors
+        ${t.written_off ? "bg-yellow-600 hover:bg-yellow-500 text-white" : "bg-gray-700 hover:bg-gray-600 text-gray-300"}"
+        data-written-off="${t.written_off ? "true" : "false"}">
+        ${t.written_off ? "Undo write-off" : "Write off"}
+      </button>
+      <button class="split-btn text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+        data-amount="${parseFloat(t.amount).toFixed(2)}">
+        Split
+      </button>
     </div>
   `,
     )
     .join("");
 
-  // When a category is selected, auto-select the same category for all rows
-  // with the same merchant name
   list.querySelectorAll(".cat-sel").forEach((sel) => {
     sel.addEventListener("change", () => {
       const row = sel.closest("[data-merchant]");
@@ -108,6 +216,39 @@ async function init() {
           other.value = chosen;
         }
       });
+    });
+  });
+
+  list.querySelectorAll(".writeoff-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const row = btn.closest("[data-id]");
+      const id = row.dataset.id;
+      const result = await apiFetch(`/transactions/${id}/writeoff`, {
+        method: "PUT",
+      });
+      if (!result) return;
+      const isOff = result.written_off;
+      btn.dataset.writtenOff = isOff ? "true" : "false";
+      btn.textContent = isOff ? "Undo write-off" : "Write off";
+      btn.classList.toggle("bg-yellow-600", isOff);
+      btn.classList.toggle("hover:bg-yellow-500", isOff);
+      btn.classList.toggle("text-white", isOff);
+      btn.classList.toggle("bg-gray-700", !isOff);
+      btn.classList.toggle("hover:bg-gray-600", !isOff);
+      btn.classList.toggle("text-gray-300", !isOff);
+      // Visual indicator on the row
+      const nameEl = row.querySelector(".flex-1");
+      nameEl.classList.toggle("opacity-50", isOff);
+      nameEl.classList.toggle("line-through", isOff);
+    });
+  });
+
+  list.querySelectorAll(".split-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const row = btn.closest("[data-id]");
+      const id = row.dataset.id;
+      const tx = transactions.find((t) => String(t.transactionid) === id);
+      if (tx) renderSplitEditor(row, tx);
     });
   });
 
@@ -143,7 +284,9 @@ document.getElementById("save-all-btn").addEventListener("click", async () => {
   for (const row of rows) {
     const id = row.dataset.id;
     const merchant = row.dataset.merchant;
-    const categoryid = row.querySelector(".cat-sel").value;
+    const catSel = row.querySelector(".cat-sel");
+    if (!catSel) continue; // skip split-editor rows
+    const categoryid = catSel.value;
     const saveMap = row.querySelector(".save-map-cb").checked;
 
     if (!categoryid) continue;
