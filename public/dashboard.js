@@ -32,7 +32,7 @@ var BASE_URL = "https://lazy-budget-app.onrender.com";
 async function apiFetch(path, opts = {}) {
   const res = await fetch(BASE_URL + path, { credentials: 'include', ...opts });
   if (res.status === 401) {
-    window.location.href = "/login.html";
+    window.location.href = "/";
     return null;
   }
   return res.json();
@@ -53,7 +53,7 @@ let trendsChart = null;
 document.getElementById("logout-btn").addEventListener("click", async() => {
   const res = await apiFetch('/auth/logout', {method: 'Post'});
   if(res.message == "logged out successfully"){
-    window.location.href = "/login.html";
+    window.location.href = "/";
   }
 });
 
