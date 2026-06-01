@@ -25,7 +25,7 @@ router.post("/login", async(req,res) =>{
         );
         if(await bcrypt.compare(req.body.password, user.rows[0].password)){
             const token = jwt.sign({ userid: user.rows[0].userid }, process.env.JWT_SECRET, { expiresIn: '1d' });
-            res.status(200).json({token, message : 'Logged in sucessfully'});
+            res.status(200).cookie("token", token, {httpOnly: true, secure: true, sameSite: 'strict'}).json({ message : 'Logged in successfully'});
         }
         else{
             res.status(401).json({message : 'incorrect password'});
@@ -33,6 +33,11 @@ router.post("/login", async(req,res) =>{
     } catch (dbErr) {
         res.status(500).json({ error: dbErr.message });
     }
+});
+
+router.post('/logout', async(req,res) =>{
+  res.clearCookie('token');
+  res.status(200).json({message: "logged out successfully"})
 });
 
 module.exports = router;

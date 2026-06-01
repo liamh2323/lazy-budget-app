@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const db = require('./db');
 const app = express();
+const cookie = require('cookie-parser');
 const uploadRouter = require('./routes/upload');
 const categoryRouter = require('./routes/categories');
 const mappedRouter = require('./routes/mappedMerchants');
@@ -12,6 +13,7 @@ const transactionRouter = require('./routes/transactions');
 
 
 app.use(express.json());
+app.use(cookie);
 
 app.get('/health', async (req, res) => {
     try {

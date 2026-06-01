@@ -26,20 +26,11 @@ const CHART_COLORS = [
   "#84cc16",
 ];
 
-const token = localStorage.getItem("token");
-if (!token) window.location.href = "/login.html";
-
 var BASE_URL = "https://lazy-budget-app.onrender.com";
 
-function authHeaders() {
-  return {
-    "Content-Type": "application/json",
-    Authorization: "Bearer " + token,
-  };
-}
 
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(BASE_URL + path, { headers: authHeaders(), ...opts });
+  const res = await fetch(BASE_URL + path, { credentials: 'include', ...opts });
   if (res.status === 401) {
     window.location.href = "/login.html";
     return null;
@@ -59,9 +50,11 @@ let categories = [];
 let spendingChart = null;
 let trendsChart = null;
 
-document.getElementById("logout-btn").addEventListener("click", () => {
-  localStorage.removeItem("token");
-  window.location.href = "/login.html";
+document.getElementById("logout-btn").addEventListener("click", async() => {
+  const res = await apiFetch('/auth/logout', {method: 'Post'});
+  if(res.message == "logged out successfully"){
+    window.location.href = "/login.html";
+  }
 });
 
 const monthSel = document.getElementById("month-select");
@@ -135,7 +128,6 @@ async function loadOverview() {
   document.getElementById("total-debits").textContent =
     "€" + totalDebits.toFixed(2);
 
-  // Net savings
   const netSavings = totalCredits - totalDebits;
   const netEl = document.getElementById("net-savings");
   netEl.textContent = (netSavings >= 0 ? "€" : "-€") + Math.abs(netSavings).toFixed(2);
@@ -487,7 +479,7 @@ document.getElementById("upload-btn").addEventListener("click", async () => {
 
   const res = await fetch(BASE_URL + "/upload", {
     method: "POST",
-    headers: { Authorization: "Bearer " + token },
+    credentials: 'include',
     body: formData,
   });
 
