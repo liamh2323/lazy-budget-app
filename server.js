@@ -13,7 +13,7 @@ const transactionRouter = require('./routes/transactions');
 
 
 app.use(express.json());
-app.use(cookie);
+app.use(cookie());
 
 app.get('/health', async (req, res) => {
     try {
