@@ -3,20 +3,12 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const token = localStorage.getItem("token");
-if (!token) window.location.href = "/login.html";
-
-function authHeaders() {
-  return {
-    "Content-Type": "application/json",
-    Authorization: "Bearer " + token,
-  };
-}
+var BASE_URL = "https://lazy-budget-app.onrender.com";
 
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(path, { headers: authHeaders(), ...opts });
+  const res = await fetch(BASE_URL + path, { credentials: 'include', ...opts });
   if (res.status === 401) {
-    window.location.href = "/login.html";
+    window.location.href = "/";
     return null;
   }
   return res.json();
@@ -38,9 +30,11 @@ const categoryName = decodeURIComponent(params.get("categoryname") || "Category"
 
 document.getElementById("category-title").textContent = categoryName;
 
-document.getElementById("logout-btn").addEventListener("click", () => {
-  localStorage.removeItem("token");
-  window.location.href = "/login.html";
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  const res = await apiFetch('/auth/logout', { method: 'POST' });
+  if (res && res.message == "logged out successfully") {
+    window.location.href = "/";
+  }
 });
 
 const monthSel = document.getElementById("month-select");

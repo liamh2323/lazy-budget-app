@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { parse } = require("csv-parse");
 const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), fileFilter, limits: {fileSize:100000} });
 const db = require("../db");
 const crypto = require("crypto");
 
@@ -26,24 +26,46 @@ function changeDateFormat(element){
 
 }
 
+function fileFilter (req, file, cb){
+  if(["application/pdf", "text/csv"].includes(file.mimetype)){
+    cb(null,true)
+  }else{
+    cb(null,false)
+  }
+}
+
 // adds CSV files to PostgreSQL
 router.post("/", upload.single("file"), (req, res) => {
+  if(!req.file){
+    return res.status(400).json({error: "file does not meet requirements"});
+  }
   parse(req.file.buffer, { columns: true }, async (err, records) => {
     if (err) return res.status(400).json({ error: err.message });
 
     try {
       const cleanData = records.map((row) => {
-        return {
-          date: changeDateFormat(row[" Posted Transactions Date"]),
-          merchant: row[" Description"],
-          type: row["Transaction Type"] == "Debit" ? "debit" : "credit",
-          amount:
-            row["Transaction Type"] == "Debit"
-              ? row[" Debit Amount"]
-              : row[" Credit Amount"],
-        };
-      });
-      //console.log(cleanData);
+        const type = row['Type'];
+          if(type != undefined){
+            return {
+              date: changeDateFormat(row['Started Date']),
+              merchant: row['Description'],
+              type: (row['Product'] == "Savings" || row["Amount"] < 0 )? "debit" : "credit",
+              amount: Math.abs(row['Amount'])
+            }
+          }
+          else{
+           return {
+             date: changeDateFormat(row[" Posted Transactions Date"]),
+             merchant: row[" Description"],
+             type: row["Transaction Type"] == "Debit" ? "debit" : "credit",
+             amount:
+               row["Transaction Type"] == "Debit"
+                 ? row[" Debit Amount"]
+                 : row[" Credit Amount"],
+
+           };
+          }
+        });
 
       const allMapped = await db.query(
         "SELECT * FROM mappedMerchants WHERE userID = $1",
