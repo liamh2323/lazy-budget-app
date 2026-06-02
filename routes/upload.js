@@ -2,9 +2,14 @@ const express = require("express");
 const router = express.Router();
 const { parse } = require("csv-parse");
 const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage(), fileFilter, limits: {fileSize:100000} });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: { fileSize: 100000 },
+});
 const db = require("../db");
 const crypto = require("crypto");
+const XLSX = require("xlsx");
 
 function makeHash(element, userID) {
   const raw = `${element.date}${element.amount}${element.merchant}${userID}`;
@@ -12,8 +17,8 @@ function makeHash(element, userID) {
   return hash;
 }
 
-function changeDateFormat(element){
-  var changedDate = "";
+function changeDateFormat(element) {
+  let changedDate = "";
 
   const splitString = element.split("/");
   changedDate += "20" + splitString[2];
@@ -23,85 +28,105 @@ function changeDateFormat(element){
   changedDate += splitString[0];
 
   return changedDate;
-
 }
 
-function fileFilter (req, file, cb){
-  if(["application/pdf", "text/csv"].includes(file.mimetype)){
-    cb(null,true)
-  }else{
-    cb(null,false)
+function fileFilter(req, file, cb) {
+  if (
+    [
+      "application/pdf",
+      "text/csv",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ].includes(file.mimetype)
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
   }
 }
 
-// adds CSV files to PostgreSQL
-router.post("/", upload.single("file"), (req, res) => {
-  if(!req.file){
-    return res.status(400).json({error: "file does not meet requirements"});
+router.post("/", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "file does not meet requirements" });
   }
-  parse(req.file.buffer, { columns: true }, async (err, records) => {
-    if (err) return res.status(400).json({ error: err.message });
 
-    try {
-      const cleanData = records.map((row) => {
-        const type = row['Type'];
-          if(type != undefined){
-            return {
-              date: changeDateFormat(row['Started Date']),
-              merchant: row['Description'],
-              type: (row['Product'] == "Savings" || row["Amount"] < 0 )? "debit" : "credit",
-              amount: Math.abs(row['Amount'])
-            }
-          }
-          else{
-           return {
-             date: changeDateFormat(row[" Posted Transactions Date"]),
-             merchant: row[" Description"],
-             type: row["Transaction Type"] == "Debit" ? "debit" : "credit",
-             amount:
-               row["Transaction Type"] == "Debit"
-                 ? row[" Debit Amount"]
-                 : row[" Credit Amount"],
+  let cleanData;
 
-           };
-          }
+  try {
+    if (req.file.mimetype == "text/csv") {
+      const records = await new Promise((resolve, reject) => {
+        parse(req.file.buffer, { columns: true }, (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
         });
+      });
 
-      const allMapped = await db.query(
-        "SELECT * FROM mappedMerchants WHERE userID = $1",
-        [req.userid],
-      );
+      cleanData = records.map((row) => {
+        return {
+          date: changeDateFormat(row[" Posted Transactions Date"]),
+          merchant: row[" Description"],
+          type: row["Transaction Type"] == "Debit" ? "debit" : "credit",
+          amount:
+            row["Transaction Type"] == "Debit"
+              ? row[" Debit Amount"]
+              : row[" Credit Amount"],
+        };
+      });
+    } else if (
+      req.file.mimetype ==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ) {
+      const workbook = XLSX.read(req.file.buffer);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const records = XLSX.utils.sheet_to_json(sheet);
+      console.log(records[0]);
 
-      const mappings = allMapped.rows.reduce((acc, row) => {
-        acc[row.merchantname] = row.categoryid;
-        return acc;
-      }, {});
-
-      for (const element of cleanData) {
-        element.hash = makeHash(element, req.userid);
-        element.categoryid = mappings[element.merchant] || null;
-
-        await db.query(
-          `INSERT INTO transactions (userID,merchantName,amount,transactionDate,type,hash,categoryid,categorised)
-          VALUES($1,$2,$3,$4,$5,$6,$7,$8)
-          ON CONFLICT (hash) DO NOTHING`,
-          [
-            req.userid,
-            element.merchant,
-            element.amount,
-            element.date,
-            element.type,
-            element.hash,
-            element.categoryid,
-            element.categoryid != null,
-          ],
-        );
-      }
-      res.json({ rows: records.length });
-    } catch (dbErr) {
-      res.status(500).json({ error: dbErr.message });
+      cleanData = records.map((row) => {
+        return {
+          date: changeDateFormat(row["Started Date"]),
+          merchant: row["Description"],
+          type:
+            row["Product"] == "Savings" || row["Amount"] < 0
+              ? "debit"
+              : "credit",
+          amount: Math.abs(row["Amount"]),
+        };
+      });
     }
-  });
+
+    const allMapped = await db.query(
+      "SELECT * FROM mappedMerchants WHERE userID = $1",
+      [req.userid],
+    );
+
+    const mappings = allMapped.rows.reduce((acc, row) => {
+      acc[row.merchantname] = row.categoryid;
+      return acc;
+    }, {});
+
+    for (const element of cleanData) {
+      element.hash = makeHash(element, req.userid);
+      element.categoryid = mappings[element.merchant] || null;
+
+      await db.query(
+        `INSERT INTO transactions (userID,merchantName,amount,transactionDate,type,hash,categoryid,categorised)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+        ON CONFLICT (hash) DO NOTHING`,
+        [
+          req.userid,
+          element.merchant,
+          element.amount,
+          element.date,
+          element.type,
+          element.hash,
+          element.categoryid,
+          element.categoryid != null,
+        ],
+      );
+    }
+    res.json({ rows: cleanData.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

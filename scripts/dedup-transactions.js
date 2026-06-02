@@ -1,16 +1,7 @@
-// Run with: node scripts/dedup-transactions.js
-// Removes duplicate transactions caused by a date format change.
-// Keeps the most recently inserted record (highest transactionid) for each
-// pair where the old record has day/month swapped relative to the newer one.
-
 require("dotenv").config();
 const db = require("../db");
 
 async function dedup() {
-  // Find and delete the older record in any pair where:
-  //  - same userid, merchantname, amount, type
-  //  - one record's date is the day/month-swapped version of the other
-  //  - the older record (lower transactionid) is the wrongly-dated one
   const result = await db.query(`
     DELETE FROM transactions
     WHERE transactionid IN (
