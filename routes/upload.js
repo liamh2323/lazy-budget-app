@@ -9,7 +9,7 @@ const upload = multer({
 });
 const db = require("../db");
 const crypto = require("crypto");
-const XLSX = require("xlsx");
+const exceljs = require("exceljs");
 
 function makeHash(element, userID) {
   const raw = `${element.date}${element.amount}${element.merchant}${userID}`;
@@ -75,9 +75,25 @@ router.post("/", upload.single("file"), async (req, res) => {
       req.file.mimetype ==
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ) {
-      const workbook = XLSX.read(req.file.buffer);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const records = XLSX.utils.sheet_to_json(sheet);
+      const workbook = new exceljs.Workbook();
+      await workbook.xlsx.load(req.file.buffer);
+      const worksheet = workbook.worksheets[0];
+
+      const headers = [];
+      worksheet.getRow(1).eachCell((cell) => {
+        headers.push(cell.value);
+      });
+
+      const records = [];
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const record = {};
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          record[headers[colNumber - 1]] = cell.value;
+        });
+        records.push(record);
+      });
+
       console.log(records[0]);
 
       cleanData = records.map((row) => {
@@ -85,10 +101,10 @@ router.post("/", upload.single("file"), async (req, res) => {
           date: changeDateFormat(row["Started Date"]),
           merchant: row["Description"],
           type:
-            row["Product"] == "Savings" || row["Amount"] < 0
+            row["Product"] == "Savings" || Number(row["Amount"]) < 0
               ? "debit"
               : "credit",
-          amount: Math.abs(row["Amount"]),
+          amount: Math.abs(Number(row["Amount"])),
         };
       });
     }
