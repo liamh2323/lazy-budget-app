@@ -98,7 +98,7 @@ router.post("/", upload.single("file"), async (req, res) => {
 
       cleanData = records.map((row) => {
         return {
-          date: changeDateFormat(row["Started Date"]),
+          date: row["Started Date"],
           merchant: row["Description"],
           type:
             row["Product"] == "Savings" || Number(row["Amount"]) < 0
