@@ -103,8 +103,7 @@ router.post("/:id/split", async (req, res) => {
   }
 
   try {
-    // Get the original transaction
-    const txResult = await db.query(
+        const txResult = await db.query(
       `SELECT amount FROM transactions WHERE transactionid = $1 AND userid = $2`,
       [req.params.id, req.userid]
     );
@@ -119,16 +118,13 @@ router.post("/:id/split", async (req, res) => {
       return res.status(400).json({ error: "Split amounts must sum to transaction total" });
     }
 
-    // Use a DB transaction
     await db.query("BEGIN");
 
-    // Remove any existing splits
     await db.query(
       `DELETE FROM transaction_splits WHERE transactionid = $1 AND userid = $2`,
       [req.params.id, req.userid]
     );
 
-    // Insert new splits
     for (const split of splits) {
       await db.query(
         `INSERT INTO transaction_splits (transactionid, categoryid, amount, userid)
@@ -137,7 +133,6 @@ router.post("/:id/split", async (req, res) => {
       );
     }
 
-    // Mark parent as categorised but with no single category
     await db.query(
       `UPDATE transactions SET categoryid = NULL, categorised = true
        WHERE transactionid = $1 AND userid = $2`,

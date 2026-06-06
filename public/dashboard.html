@@ -85,10 +85,7 @@
             <p class="text-xs text-gray-400 uppercase tracking-wider">
               Net Savings
             </p>
-            <p
-              id="net-savings"
-              class="text-2xl font-semibold mt-1"
-            >
+            <p id="net-savings" class="text-x1: md:text-2xl font-semibold mt-1">
               —
             </p>
           </div>
@@ -109,12 +106,14 @@
           </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
             <p class="text-sm font-medium text-gray-300 mb-4">
               Spending Trends (6 months)
             </p>
-            <canvas id="trends-chart"></canvas>
+            <div style="height: 200px">
+              <canvas id="trends-chart"></canvas>
+            </div>
           </div>
 
           <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
@@ -145,23 +144,28 @@
       </div>
 
       <div id="tab-merchants" class="hidden space-y-5">
-
         <div class="space-y-2">
-          <p class="text-xs text-gray-400 uppercase tracking-wider">Unmapped Merchants</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wider">
+            Unmapped Merchants
+          </p>
           <div id="unmapped-list" class="space-y-2"></div>
         </div>
 
         <hr class="border-gray-700" />
 
         <div class="space-y-2">
-          <p class="text-xs text-gray-400 uppercase tracking-wider">Existing Mappings</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wider">
+            Existing Mappings
+          </p>
           <div id="merchants-list" class="space-y-2"></div>
         </div>
 
         <hr class="border-gray-700" />
 
         <div class="space-y-2">
-          <p class="text-xs text-gray-400 uppercase tracking-wider">New Category</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wider">
+            New Category
+          </p>
           <div class="flex gap-2">
             <input
               id="merchants-new-cat-name"
