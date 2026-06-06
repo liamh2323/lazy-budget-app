@@ -10,6 +10,7 @@ router.get("/unmapped", async (req, res) => {
               SUM(t.amount) AS total
        FROM transactions t
        WHERE t.userid = $1
+         AND COALESCE(t.written_off, false) = false
          AND t.merchantname NOT IN (
            SELECT mm.merchantname FROM mappedMerchants mm WHERE mm.userid = $1
          )
