@@ -355,11 +355,13 @@ document.getElementById("add-cat-btn").addEventListener("click", async () => {
 async function loadMerchants() {
   if (categories.length === 0)
     categories = (await apiFetch("/categories")) || [];
-  const [merchants, unmapped] = await Promise.all([
+  const [merchants, unmapped, hidden] = await Promise.all([
     apiFetch("/mappedMerchants"),
     apiFetch("/mappedMerchants/unmapped"),
+    apiFetch("/mappedMerchants/hidden"),
   ]);
   renderUnmapped(unmapped || []);
+  renderHidden(hidden || []);
   renderMerchants(merchants || []);
 }
 
@@ -392,6 +394,8 @@ function renderUnmapped(unmapped) {
         ${catOptions()}
       </select>
       <button class="map-btn bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-1.5 text-xs transition-colors">Map</button>
+      <button class="writeoff-btn bg-yellow-600 hover:bg-yellow-500 rounded px-3 py-1.5 text-xs transition-colors">Write off</button>
+      <button class="hide-btn bg-gray-600 hover:bg-gray-500 rounded px-3 py-1.5 text-xs transition-colors">Hide</button>
     </div>
   `,
     )
@@ -405,6 +409,61 @@ function renderUnmapped(unmapped) {
       await apiFetch("/mappedMerchants", {
         method: "POST",
         body: JSON.stringify({ merchantName: row.dataset.merchant, categoryID }),
+      });
+      await loadMerchants();
+    });
+  });
+
+  list.querySelectorAll(".writeoff-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const merchantName = btn.closest("[data-merchant]").dataset.merchant;
+      await apiFetch("/mappedMerchants/writeoff-merchant", {
+        method: "PUT",
+        body: JSON.stringify({ merchantName }),
+      });
+      await loadMerchants();
+    });
+  });
+
+  list.querySelectorAll(".hide-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const merchantName = btn.closest("[data-merchant]").dataset.merchant;
+      await apiFetch("/mappedMerchants/hide", {
+        method: "POST",
+        body: JSON.stringify({ merchantName }),
+      });
+      await loadMerchants();
+    });
+  });
+}
+
+function renderHidden(hidden) {
+  const section = document.getElementById("hidden-merchants-section");
+  const list = document.getElementById("hidden-list");
+
+  if (hidden.length === 0) {
+    section.classList.add("hidden");
+    return;
+  }
+
+  section.classList.remove("hidden");
+  list.innerHTML = hidden
+    .map(
+      (m) => `
+    <div class="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded px-3 py-2" data-merchant="${escHtml(m.merchantname)}">
+      <span class="flex-1 text-sm text-gray-400">${escHtml(m.merchantname)}</span>
+      <button class="unhide-btn bg-gray-600 hover:bg-gray-500 rounded px-3 py-1.5 text-xs transition-colors">Unhide</button>
+    </div>
+  `,
+    )
+    .join("");
+
+  list.querySelectorAll(".unhide-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const merchantName = btn.closest("[data-merchant]").dataset.merchant;
+      await apiFetch("/mappedMerchants/hide", {
+        method: "DELETE",
+        body: JSON.stringify({ merchantName }),
       });
       await loadMerchants();
     });

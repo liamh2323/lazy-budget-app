@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+// ensure hidden_merchants table exists
+db.query(`
+  CREATE TABLE IF NOT EXISTS hidden_merchants (
+    userid INTEGER NOT NULL,
+    merchantname TEXT NOT NULL,
+    PRIMARY KEY (userid, merchantname)
+  )
+`).catch(console.error);
+
 // merchants that appear in transactions but have no mapping yet
 router.get("/unmapped", async (req, res) => {
   try {
@@ -14,11 +23,72 @@ router.get("/unmapped", async (req, res) => {
          AND t.merchantname NOT IN (
            SELECT mm.merchantname FROM mappedMerchants mm WHERE mm.userid = $1
          )
+         AND t.merchantname NOT IN (
+           SELECT hm.merchantname FROM hidden_merchants hm WHERE hm.userid = $1
+         )
        GROUP BY t.merchantname
        ORDER BY t.merchantname`,
       [req.userid],
     );
     res.json(result.rows);
+  } catch (dbErr) {
+    res.status(500).json({ error: dbErr.message });
+  }
+});
+
+// list hidden merchants
+router.get("/hidden", async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT merchantname FROM hidden_merchants WHERE userid = $1 ORDER BY merchantname`,
+      [req.userid]
+    );
+    res.json(result.rows);
+  } catch (dbErr) {
+    res.status(500).json({ error: dbErr.message });
+  }
+});
+
+// hide a merchant from the unmapped list
+router.post("/hide", async (req, res) => {
+  const { merchantName } = req.body;
+  if (!merchantName) return res.status(400).json({ error: "merchantName required" });
+  try {
+    await db.query(
+      `INSERT INTO hidden_merchants (userid, merchantname) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [req.userid, merchantName]
+    );
+    res.json({ success: true });
+  } catch (dbErr) {
+    res.status(500).json({ error: dbErr.message });
+  }
+});
+
+// unhide a merchant
+router.delete("/hide", async (req, res) => {
+  const { merchantName } = req.body;
+  if (!merchantName) return res.status(400).json({ error: "merchantName required" });
+  try {
+    await db.query(
+      `DELETE FROM hidden_merchants WHERE userid = $1 AND merchantname = $2`,
+      [req.userid, merchantName]
+    );
+    res.json({ success: true });
+  } catch (dbErr) {
+    res.status(500).json({ error: dbErr.message });
+  }
+});
+
+// write off all transactions for a merchant
+router.put("/writeoff-merchant", async (req, res) => {
+  const { merchantName } = req.body;
+  if (!merchantName) return res.status(400).json({ error: "merchantName required" });
+  try {
+    await db.query(
+      `UPDATE transactions SET written_off = true WHERE merchantname = $1 AND userid = $2`,
+      [merchantName, req.userid]
+    );
+    res.json({ success: true });
   } catch (dbErr) {
     res.status(500).json({ error: dbErr.message });
   }
