@@ -30,7 +30,8 @@ var BASE_URL = "https://lazy-budget-app.onrender.com";
 
 
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(BASE_URL + path, { credentials: 'include', ...opts });
+  const headers = { ...(opts.body ? { "Content-Type": "application/json" } : {}), ...opts.headers };
+  const res = await fetch(BASE_URL + path, { credentials: 'include', ...opts, headers });
   if (res.status === 401) {
     window.location.href = "/";
     return null;
