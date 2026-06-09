@@ -60,6 +60,15 @@ router.post("/", upload.single("file"), async (req, res) => {
         });
       });
 
+      if (records.length === 0) {
+        return res.status(400).json({ error: "CSV file is empty" });
+      }
+      const requiredCsvColumns = [" Posted Transactions Date", " Description", "Transaction Type", " Debit Amount", " Credit Amount"];
+      const missingCsvColumns = requiredCsvColumns.filter(col => !(col in records[0]));
+      if (missingCsvColumns.length > 0) {
+        return res.status(400).json({ error: "CSV file format not recognised" });
+      }
+
       cleanData = records.map((row) => {
         return {
           date: changeDateFormat(row[" Posted Transactions Date"]),
@@ -93,8 +102,6 @@ router.post("/", upload.single("file"), async (req, res) => {
         });
         records.push(record);
       });
-
-      console.log(records[0]);
 
       cleanData = records.map((row) => {
         return {
@@ -141,7 +148,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     }
     res.json({ rows: cleanData.length });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Error: Unable to process file" });
   }
 });
 

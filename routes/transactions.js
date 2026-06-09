@@ -2,14 +2,37 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
+function parsePositiveInt(val) {
+  const n = parseInt(val, 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function parseNonNegativeInt(val) {
+  const n = parseInt(val, 10);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
+function isValidMonth(val) {
+  const n = parsePositiveInt(val);
+  return n !== null && n >= 1 && n <= 12;
+}
+
+function isValidYear(val) {
+  const n = parseNonNegativeInt(val);
+  return n !== null && n >= 2000 && n <= 2100;
+}
+
 router.get("/sumDebits", async (req, res) => {
   const { month, year } = req.query;
+  if ((month || year) && (!isValidMonth(month) || !isValidYear(year))) {
+    return res.status(400).json({ error: "Invalid month or year" });
+  }
   try {
     const params = [req.userid];
     let dateFilter = "";
 
     if (month && year) {
-      params.push(month, year);
+      params.push(parseInt(month, 10), parseInt(year, 10));
       dateFilter = ` AND EXTRACT(MONTH FROM t.transactiondate) = $2
                      AND EXTRACT(YEAR  FROM t.transactiondate) = $3`;
     }
@@ -45,18 +68,21 @@ router.get("/sumDebits", async (req, res) => {
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
 router.get("/sumCredits", async (req, res) => {
   const { month, year } = req.query;
+  if ((month || year) && (!isValidMonth(month) || !isValidYear(year))) {
+    return res.status(400).json({ error: "Invalid month or year" });
+  }
   try {
     let query = `SELECT SUM(amount) AS sum FROM transactions WHERE type = 'credit' AND userid = $1 AND (written_off = false OR written_off IS NULL)`;
     const params = [req.userid];
 
     if (month && year) {
-      params.push(month, year);
+      params.push(parseInt(month, 10), parseInt(year, 10));
       query += ` AND EXTRACT(MONTH FROM transactiondate) = $2
                  AND EXTRACT(YEAR  FROM transactiondate) = $3`;
     }
@@ -64,7 +90,7 @@ router.get("/sumCredits", async (req, res) => {
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -78,7 +104,7 @@ router.get("/uncategorised", async (req, res) => {
     );
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -92,7 +118,7 @@ router.put("/:id", async (req, res) => {
     );
     res.json({ success: true });
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -102,8 +128,16 @@ router.post("/:id/split", async (req, res) => {
     return res.status(400).json({ error: "At least 2 splits required" });
   }
 
+  for (const split of splits) {
+    const catId = parsePositiveInt(split.categoryid);
+    const amount = parseFloat(split.amount);
+    if (catId === null || !isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ error: "Each split must have a valid categoryid and a positive amount" });
+    }
+  }
+
   try {
-        const txResult = await db.query(
+    const txResult = await db.query(
       `SELECT amount FROM transactions WHERE transactionid = $1 AND userid = $2`,
       [req.params.id, req.userid]
     );
@@ -111,10 +145,20 @@ router.post("/:id/split", async (req, res) => {
       return res.status(404).json({ error: "Transaction not found" });
     }
 
-    const txAmount = parseFloat(txResult.rows[0].amount);
-    const splitTotal = splits.reduce((s, r) => s + parseFloat(r.amount), 0);
+    // Verify all split categories belong to this user
+    const categoryIds = splits.map(s => parseInt(s.categoryid, 10));
+    const catCheck = await db.query(
+      `SELECT categoryid FROM categories WHERE userid = $1 AND categoryid = ANY($2::int[])`,
+      [req.userid, categoryIds]
+    );
+    if (catCheck.rows.length !== categoryIds.length) {
+      return res.status(403).json({ error: "One or more categories not found" });
+    }
 
-    if (Math.abs(splitTotal - txAmount) > 0.01) {
+    const txAmount = Math.round(parseFloat(txResult.rows[0].amount) * 100);
+    const splitTotal = splits.reduce((s, r) => s + Math.round(parseFloat(r.amount) * 100), 0);
+
+    if (Math.abs(splitTotal - txAmount) > 1) {
       return res.status(400).json({ error: "Split amounts must sum to transaction total" });
     }
 
@@ -129,7 +173,7 @@ router.post("/:id/split", async (req, res) => {
       await db.query(
         `INSERT INTO transaction_splits (transactionid, categoryid, amount, userid)
          VALUES ($1, $2, $3, $4)`,
-        [req.params.id, split.categoryid, split.amount, req.userid]
+        [req.params.id, parseInt(split.categoryid, 10), parseFloat(split.amount), req.userid]
       );
     }
 
@@ -143,7 +187,7 @@ router.post("/:id/split", async (req, res) => {
     res.json({ success: true });
   } catch (dbErr) {
     await db.query("ROLLBACK");
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -161,12 +205,17 @@ router.put("/:id/writeoff", async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
 router.get("/monthlyTrends", async (req, res) => {
-  const months = parseInt(req.query.months) || 6;
+  const rawMonths = req.query.months !== undefined ? req.query.months : "6";
+  const parsedMonths = parsePositiveInt(rawMonths);
+  if (parsedMonths === null || parsedMonths > 24) {
+    return res.status(400).json({ error: "months must be an integer between 1 and 24" });
+  }
+  const months = parsedMonths;
   try {
     const result = await db.query(
       `SELECT yr, mo,
@@ -201,13 +250,20 @@ router.get("/monthlyTrends", async (req, res) => {
     );
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
 router.get("/topMerchants", async (req, res) => {
   const { month, year } = req.query;
-  const limit = parseInt(req.query.limit) || 5;
+  if ((month || year) && (!isValidMonth(month) || !isValidYear(year))) {
+    return res.status(400).json({ error: "Invalid month or year" });
+  }
+  const rawLimit = req.query.limit !== undefined ? req.query.limit : "5";
+  const limit = parsePositiveInt(rawLimit);
+  if (limit === null || limit > 20) {
+    return res.status(400).json({ error: "limit must be an integer between 1 and 20" });
+  }
   try {
     let query = `
       SELECT t.merchantname, SUM(t.amount) AS total
@@ -219,7 +275,7 @@ router.get("/topMerchants", async (req, res) => {
     const params = [req.userid];
 
     if (month && year) {
-      params.push(month, year);
+      params.push(parseInt(month, 10), parseInt(year, 10));
       query += ` AND EXTRACT(MONTH FROM t.transactiondate) = $2
                  AND EXTRACT(YEAR  FROM t.transactiondate) = $3`;
     }
@@ -230,7 +286,7 @@ router.get("/topMerchants", async (req, res) => {
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -238,6 +294,9 @@ router.get("/byCategory", async (req, res) => {
   const { categoryid, month, year } = req.query;
   if (!categoryid || !month || !year) {
     return res.status(400).json({ error: "categoryid, month, and year are required" });
+  }
+  if (!parsePositiveInt(categoryid) || !isValidMonth(month) || !isValidYear(year)) {
+    return res.status(400).json({ error: "Invalid categoryid, month, or year" });
   }
   try {
     const result = await db.query(
@@ -264,11 +323,11 @@ router.get("/byCategory", async (req, res) => {
          AND EXTRACT(YEAR FROM t.transactiondate) = $4
 
        ORDER BY transactiondate DESC`,
-      [req.userid, categoryid, month, year]
+      [req.userid, parseInt(categoryid, 10), parseInt(month, 10), parseInt(year, 10)]
     );
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 

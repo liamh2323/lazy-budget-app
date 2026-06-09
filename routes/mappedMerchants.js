@@ -32,7 +32,7 @@ router.get("/unmapped", async (req, res) => {
     );
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -45,7 +45,7 @@ router.get("/hidden", async (req, res) => {
     );
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -60,7 +60,7 @@ router.post("/hide", async (req, res) => {
     );
     res.json({ success: true });
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -75,7 +75,7 @@ router.delete("/hide", async (req, res) => {
     );
     res.json({ success: true });
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -90,7 +90,7 @@ router.put("/writeoff-merchant", async (req, res) => {
     );
     res.json({ success: true });
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -110,7 +110,7 @@ router.get("/", async (req, res) => {
         );
         res.json(result.rows);
     } catch (dbErr) {
-         res.status(500).json({ error: dbErr.message });
+         res.status(500).json({ error: "Error: Unable to Execute Request" });
     }
 });
 
@@ -136,7 +136,7 @@ router.post("/", async(req,res) =>{
 
         res.json(result.rows);
     } catch (dbErr) {
-        res.status(500).json({ error: dbErr.message });
+        res.status(500).json({ error: "Error: Unable to Execute Request" });
     }
 });
 
@@ -147,9 +147,9 @@ router.delete("/", async(req,res) => {
             "DELETE FROM mappedMerchants WHERE mappedID = $1 AND userID = $2",
             [req.body.mappedID, req.userid],
         );
-        res.json('category deleted')
+        res.json({ message: "Mapping deleted" });
     } catch (dbErr) {
-        res.status(500).json({ error: dbErr.message });
+        res.status(500).json({ error: "Error: Unable to Execute Request" });
     }
 });
 
@@ -162,7 +162,7 @@ router.delete("/byMerchant", async (req, res) => {
         );
         res.json({ success: true });
     } catch (dbErr) {
-        res.status(500).json({ error: dbErr.message });
+        res.status(500).json({ error: "Error: Unable to Execute Request" });
     }
 });
 

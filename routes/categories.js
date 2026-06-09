@@ -11,33 +11,41 @@ router.get("/", async (req, res) => {
     );
     res.json(result.rows);
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
 // add new category
 router.post("/", async (req, res) => {
+  const name = req.body.categoryName;
+  if (!name || typeof name !== "string" || name.trim().length === 0 || name.length > 100) {
+    return res.status(400).json({ error: "categoryName must be between 1 and 100 characters" });
+  }
   try {
     await db.query(
       "INSERT INTO categories (categoryName,userID) VALUES($1,$2)",
-      [req.body.categoryName, req.userid],
+      [name.trim(), req.userid],
     );
-    res.json("new category successfully added :)");
+    res.json({ message: "New category successfully added" });
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
 //update category name
 router.put("/:id", async (req, res) => {
+  const name = req.body.categoryName;
+  if (!name || typeof name !== "string" || name.trim().length === 0 || name.length > 100) {
+    return res.status(400).json({ error: "categoryName must be between 1 and 100 characters" });
+  }
   try {
     await db.query(
       "UPDATE categories SET categoryName = $1 WHERE categoryID = $2 AND userid = $3",
-      [req.body.categoryName, req.params.id, req.userid],
+      [name.trim(), req.params.id, req.userid],
     );
-    res.json("category name sucessfully changed");
+    res.json({ message: "Category name successfully changed" });
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
@@ -48,9 +56,9 @@ router.delete("/:id", async (req, res) => {
       "DELETE FROM categories WHERE categoryID = $1 AND userid = $2",
       [req.params.id, req.userid],
     );
-    res.json("category deleted");
+    res.json({ message: "Category deleted" });
   } catch (dbErr) {
-    res.status(500).json({ error: dbErr.message });
+    res.status(500).json({ error: "Error: Unable to Execute Request" });
   }
 });
 
