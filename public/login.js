@@ -9,7 +9,9 @@ document.getElementById("show-login").addEventListener("click", () => {
   document.getElementById("login-panel").classList.remove("hidden");
 });
 
-const BASE_URL = "https://lazy-budget-app.onrender.com";
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? "https://lazy-budget-app.onrender.com" 
+  : "http://localhost:3000";
 
 document.getElementById("login-btn").addEventListener("click", async () => {
   const email = document.getElementById("email").value.trim();
