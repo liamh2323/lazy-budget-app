@@ -23,9 +23,6 @@ router.post("/login", async(req,res) =>{
         const user = await db.query(
             "SELECT * FROM users WHERE email = $1", [req.body.email]
         );
-        if(user.rows.length === 0) {
-            return res.status(401).json({message : 'User not found'});
-        }
         if(await bcrypt.compare(req.body.password, user.rows[0].password)){
             const token = jwt.sign({ userid: user.rows[0].userid }, process.env.JWT_SECRET, { expiresIn: '1d' });
             res.status(200).cookie("token", token, {httpOnly: true, secure: true, sameSite: 'strict'}).json({ message : 'Logged in successfully'});
